@@ -2,9 +2,10 @@
 
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Square, CircleIcon, Minus, ArrowRight, Type, Pencil, Trash2, MousePointer } from "lucide-react"
+import { Square, CircleIcon, Minus, ArrowRight, Type, Pencil, Trash2, MousePointer, HelpCircle } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 type ToolbarProps = {
   activeTool: string
@@ -23,6 +24,7 @@ type ToolbarProps = {
   setGridColor: (color: string) => void
   gridOpacity: number
   setGridOpacity: (opacity: number) => void
+  onShowKeyboardShortcuts: () => void
 }
 
 export default function Toolbar({
@@ -42,68 +44,138 @@ export default function Toolbar({
   setGridColor,
   gridOpacity,
   setGridOpacity,
+  onShowKeyboardShortcuts,
 }: ToolbarProps) {
   return (
     <div className="w-64 bg-white border-r p-4 flex flex-col gap-4">
       <div>
         <h2 className="font-medium mb-2">Tools</h2>
         <div className="grid grid-cols-3 gap-2">
-          <Button
-            variant={activeTool === "selection" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setTool("selection")}
-            title="Selection"
-          >
-            <MousePointer className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={activeTool === "rectangle" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setTool("rectangle")}
-            title="Rectangle"
-          >
-            <Square className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={activeTool === "circle" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setTool("circle")}
-            title="Circle"
-          >
-            <CircleIcon className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={activeTool === "line" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setTool("line")}
-            title="Line"
-          >
-            <Minus className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={activeTool === "arrow" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setTool("arrow")}
-            title="Arrow"
-          >
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={activeTool === "text" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setTool("text")}
-            title="Text"
-          >
-            <Type className="h-5 w-5" />
-          </Button>
-          <Button
-            variant={activeTool === "freehand" ? "default" : "outline"}
-            size="icon"
-            onClick={() => setTool("freehand")}
-            title="Freehand"
-          >
-            <Pencil className="h-5 w-5" />
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={activeTool === "selection" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setTool("selection")}
+                  title="Selection"
+                >
+                  <MousePointer className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Selection (V)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={activeTool === "rectangle" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setTool("rectangle")}
+                  title="Rectangle"
+                >
+                  <Square className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Rectangle (R)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={activeTool === "circle" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setTool("circle")}
+                  title="Circle"
+                >
+                  <CircleIcon className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Circle (C)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={activeTool === "line" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setTool("line")}
+                  title="Line"
+                >
+                  <Minus className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Line (L)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={activeTool === "arrow" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setTool("arrow")}
+                  title="Arrow"
+                >
+                  <ArrowRight className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Arrow (A)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={activeTool === "text" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setTool("text")}
+                  title="Text"
+                >
+                  <Type className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Text (T)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={activeTool === "freehand" ? "default" : "outline"}
+                  size="icon"
+                  onClick={() => setTool("freehand")}
+                  title="Freehand"
+                >
+                  <Pencil className="h-5 w-5" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                <p>Pencil (P)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -181,7 +253,7 @@ export default function Toolbar({
         <h2 className="font-medium mb-2">Grid</h2>
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label htmlFor="show-grid">Show Grid</Label>
+            <Label htmlFor="show-grid">Show Grid (G)</Label>
             <div className="flex items-center h-5">
               <input
                 id="show-grid"
@@ -244,7 +316,11 @@ export default function Toolbar({
 
       <Separator />
 
-      <div className="mt-auto">
+      <div className="mt-auto space-y-2">
+        <Button variant="outline" size="sm" className="w-full" onClick={onShowKeyboardShortcuts}>
+          <HelpCircle className="h-4 w-4 mr-2" /> Keyboard Shortcuts (?)
+        </Button>
+
         <Button
           variant="destructive"
           className="w-full"

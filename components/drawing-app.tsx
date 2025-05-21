@@ -5,7 +5,8 @@ import type React from "react"
 import { useState, useRef, useEffect, useCallback } from "react"
 import Toolbar from "./toolbar"
 import PropertiesPanel from "./properties-panel"
-import { Download, Upload, Undo, Redo } from "lucide-react"
+import KeyboardShortcutsDialog from "./keyboard-shortcuts-dialog"
+import { Download, Upload, Undo, Redo, Copy, Scissors, Clipboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
@@ -62,7 +63,7 @@ export default function DrawingApp() {
   const elements = history.present
 
   const [selectedElement, setSelectedElement] = useState<Element | null>(null)
-  const [tool, setTool] = useState<ElementType>("rectangle")
+  const [tool, setTool] = useState<ElementType>("selection")
   const [isDrawing, setIsDrawing] = useState(false)
   const [color, setColor] = useState("#000000")
   const [strokeWidth, setStrokeWidth] = useState(2)
@@ -72,6 +73,11 @@ export default function DrawingApp() {
   const [startPoint, setStartPoint] = useState<{ x: number; y: number } | null>(null)
   const [canvasSize, setCanvasSize] = useState({ width: 800, height: 600 })
   const [activeHandle, setActiveHandle] = useState<HandlePosition | null>(null)
+  const [zoom, setZoom] = useState(1)
+  const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
+
+  // Clipboard for copy/paste
+  const [clipboard, setClipboard] = useState<Element[]>([])
 
   // Grid settings
   const [showGrid, setShowGrid] = useState(true)
@@ -153,9 +159,13 @@ export default function DrawingApp() {
     // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height)
 
+    // Apply zoom
+    ctx.save()
+    ctx.scale(zoom, zoom)
+
     // Draw grid if enabled
     if (showGrid) {
-      drawGrid(ctx, canvas.width, canvas.height, gridSize, gridColor, gridOpacity)
+      drawGrid(ctx, canvas.width / zoom, canvas.height / zoom, gridSize, gridColor, gridOpacity)
     }
 
     // Draw selection box if it exists
@@ -366,7 +376,10 @@ export default function DrawingApp() {
         ctx.restore()
       }
     })
-  }, [elements, activeHandle, showGrid, gridSize, gridColor, gridOpacity, selectionBox])
+
+    // Restore zoom
+    ctx.restore()
+  }, [elements, activeHandle, showGrid, gridSize, gridColor, gridOpacity, selectionBox, zoom])
 
   // Function to draw the grid
   const drawGrid = (
@@ -924,20 +937,79 @@ export default function DrawingApp() {
   // Add keyboard shortcuts for undo/redo and selection
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Don't trigger shortcuts if user is typing in a text field
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return
+      }
+
+      // Tool selection shortcuts
+      if (!e.ctrlKey && !e.metaKey && !e.altKey) {
+        switch (e.key.toLowerCase()) {
+          case "v":
+            setTool("selection")
+            e.preventDefault()
+            break
+          case "r":
+            setTool("rectangle")
+            e.preventDefault()
+            break
+          case "c":
+            setTool("circle")
+            e.preventDefault()
+            break
+          case "l":
+            setTool("line")
+            e.preventDefault()
+            break
+          case "a":
+            setTool("arrow")
+            e.preventDefault()
+            break
+          case "t":
+            setTool("text")
+            e.preventDefault()
+            break
+          case "p":
+            setTool("freehand")
+            e.preventDefault()
+            break
+          case "g":
+            setShowGrid(!showGrid)
+            e.preventDefault()
+            break
+          case "?":
+            setShowShortcutsDialog(true)
+            e.preventDefault()
+            break
+          case "escape":
+            // Deselect all elements
+            if (elements.some((el) => el.selected)) {
+              const updatedElements = elements.map((el) => ({
+                ...el,
+                selected: false,
+              }))
+              updateHistory(updatedElements)
+              setSelectedElement(null)
+            }
+            e.preventDefault()
+            break
+        }
+      }
+
       // Undo: Ctrl+Z
-      if (e.ctrlKey && e.key === "z" && !e.shiftKey) {
+      if ((e.ctrlKey || e.metaKey) && e.key === "z" && !e.shiftKey) {
         e.preventDefault()
         handleUndo()
       }
 
       // Redo: Ctrl+Y or Ctrl+Shift+Z
-      if ((e.ctrlKey && e.key === "y") || (e.ctrlKey && e.shiftKey && e.key === "z")) {
+      if ((e.ctrlKey || e.metaKey) && (e.key === "y" || (e.shiftKey && e.key === "z"))) {
         e.preventDefault()
         handleRedo()
       }
 
       // Select all: Ctrl+A
-      if (e.ctrlKey && e.key === "a") {
+      if ((e.ctrlKey || e.metaKey) && e.key === "a") {
         e.preventDefault()
         const updatedElements = elements.map((el) => ({
           ...el,
@@ -951,17 +1023,145 @@ export default function DrawingApp() {
         }
       }
 
+      // Copy: Ctrl+C
+      if ((e.ctrlKey || e.metaKey) && e.key === "c") {
+        e.preventDefault()
+        const selectedElements = elements.filter((el) => el.selected)
+        if (selectedElements.length > 0) {
+          // Create deep copies of the selected elements
+          const copiedElements = selectedElements.map((el) => ({
+            ...JSON.parse(JSON.stringify(el)),
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Generate new IDs
+          }))
+          setClipboard(copiedElements)
+        }
+      }
+
+      // Cut: Ctrl+X
+      if ((e.ctrlKey || e.metaKey) && e.key === "x") {
+        e.preventDefault()
+        const selectedElements = elements.filter((el) => el.selected)
+        if (selectedElements.length > 0) {
+          // Create deep copies of the selected elements
+          const copiedElements = selectedElements.map((el) => ({
+            ...JSON.parse(JSON.stringify(el)),
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // Generate new IDs
+          }))
+          setClipboard(copiedElements)
+
+          // Remove the selected elements
+          const updatedElements = elements.filter((el) => !el.selected)
+          updateHistory(updatedElements)
+          setSelectedElement(null)
+        }
+      }
+
+      // Paste: Ctrl+V
+      if ((e.ctrlKey || e.metaKey) && e.key === "v") {
+        e.preventDefault()
+        if (clipboard.length > 0) {
+          // Deselect all current elements
+          const deselectedElements = elements.map((el) => ({
+            ...el,
+            selected: false,
+          }))
+
+          // Create copies of clipboard elements with new IDs and offset positions
+          const pastedElements = clipboard.map((el) => {
+            const newElement = {
+              ...JSON.parse(JSON.stringify(el)),
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              selected: true,
+              x: el.x + 20, // Offset to make it clear it's a new element
+              y: el.y + 20,
+            }
+
+            // Adjust points for line and arrow
+            if ((el.type === "line" || el.type === "arrow") && el.points) {
+              newElement.points = el.points.map((point) => ({
+                x: point.x + 20,
+                y: point.y + 20,
+              }))
+            }
+
+            return newElement
+          })
+
+          // Add the pasted elements to the canvas
+          updateHistory([...deselectedElements, ...pastedElements])
+
+          // Set the first pasted element as the selected element
+          if (pastedElements.length > 0) {
+            setSelectedElement(pastedElements[0])
+          }
+        }
+      }
+
+      // Duplicate: Ctrl+D
+      if ((e.ctrlKey || e.metaKey) && e.key === "d") {
+        e.preventDefault()
+        const selectedElements = elements.filter((el) => el.selected)
+        if (selectedElements.length > 0) {
+          // Deselect all current elements
+          const deselectedElements = elements.map((el) => ({
+            ...el,
+            selected: false,
+          }))
+
+          // Create duplicates with new IDs and offset positions
+          const duplicatedElements = selectedElements.map((el) => {
+            const newElement = {
+              ...JSON.parse(JSON.stringify(el)),
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              selected: true,
+              x: el.x + 20,
+              y: el.y + 20,
+            }
+
+            // Adjust points for line and arrow
+            if ((el.type === "line" || el.type === "arrow") && el.points) {
+              newElement.points = el.points.map((point) => ({
+                x: point.x + 20,
+                y: point.y + 20,
+              }))
+            }
+
+            return newElement
+          })
+
+          // Add the duplicated elements to the canvas
+          updateHistory([...deselectedElements, ...duplicatedElements])
+
+          // Set the first duplicated element as the selected element
+          if (duplicatedElements.length > 0) {
+            setSelectedElement(duplicatedElements[0])
+          }
+        }
+      }
+
       // Delete selected elements: Delete key
       if (e.key === "Delete" || e.key === "Backspace") {
         if (elements.some((el) => el.selected)) {
           handleDeleteSelectedElements()
         }
       }
+
+      // Zoom controls
+      if ((e.ctrlKey || e.metaKey) && e.key === "0") {
+        e.preventDefault()
+        setZoom(1) // Reset zoom
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "=") {
+        e.preventDefault()
+        setZoom((prev) => Math.min(prev + 0.1, 3)) // Zoom in (max 3x)
+      } else if ((e.ctrlKey || e.metaKey) && e.key === "-") {
+        e.preventDefault()
+        setZoom((prev) => Math.max(prev - 0.1, 0.5)) // Zoom out (min 0.5x)
+      }
     }
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [history, elements, selectedElement, handleUndo, handleRedo, updateHistory])
+  }, [history, elements, selectedElement, handleUndo, handleRedo, updateHistory, clipboard, showGrid, zoom])
 
   const handleDeleteSelectedElements = () => {
     const updatedElements = elements.filter((el) => !el.selected)
@@ -984,8 +1184,8 @@ export default function DrawingApp() {
 
     const rect = canvas.getBoundingClientRect()
     return {
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top,
+      x: (e.clientX - rect.left) / zoom,
+      y: (e.clientY - rect.top) / zoom,
     }
   }
 
@@ -995,6 +1195,9 @@ export default function DrawingApp() {
     // Check if Shift key is pressed for multi-select
     const isShiftPressed = e.shiftKey
     setMultiSelectMode(isShiftPressed)
+
+    // Check if Alt key is pressed for duplication
+    const isAltPressed = e.altKey
 
     // First, check if we're clicking on a resize handle of the selected element
     if (selectedElement) {
@@ -1012,6 +1215,27 @@ export default function DrawingApp() {
     const clickedElement = elements.find((element) => isPointInElement(x, y, element))
 
     if (clickedElement) {
+      // If Alt is pressed, duplicate the element before moving
+      if (isAltPressed) {
+        const duplicatedElement = {
+          ...JSON.parse(JSON.stringify(clickedElement)),
+          id: Date.now().toString(),
+          selected: true,
+        }
+
+        // Deselect all other elements if Shift is not pressed
+        const updatedElements = elements.map((el) => ({
+          ...el,
+          selected: isShiftPressed ? el.selected : el.id === clickedElement.id,
+        }))
+
+        updateHistory([...updatedElements, duplicatedElement])
+        setSelectedElement(duplicatedElement)
+        setAction("moving")
+        setStartPoint({ x, y })
+        return
+      }
+
       // Check if we should deselect other elements or keep them selected
       if (!isShiftPressed && !clickedElement.selected) {
         // Regular click (without Shift) - deselect others
@@ -1125,8 +1349,8 @@ export default function DrawingApp() {
             const event = new MouseEvent("dblclick", {
               bubbles: true,
               cancelable: true,
-              clientX: x + canvas.getBoundingClientRect().left,
-              clientY: y + canvas.getBoundingClientRect().top,
+              clientX: x * zoom + canvas.getBoundingClientRect().left,
+              clientY: y * zoom + canvas.getBoundingClientRect().top,
             })
             canvas.dispatchEvent(event)
           }
@@ -1200,10 +1424,22 @@ export default function DrawingApp() {
       } else if (tool === "rectangle") {
         const updatedElements = elements.map((el, index) => {
           if (index === elements.length - 1) {
-            return {
-              ...el,
-              width: x - el.x,
-              height: y - el.y,
+            // If Shift is pressed, make a perfect square
+            if (e.shiftKey) {
+              const width = x - el.x
+              const height = y - el.y
+              const size = Math.max(Math.abs(width), Math.abs(height))
+              return {
+                ...el,
+                width: width >= 0 ? size : -size,
+                height: height >= 0 ? size : -size,
+              }
+            } else {
+              return {
+                ...el,
+                width: x - el.x,
+                height: y - el.y,
+              }
             }
           }
           return el
@@ -1236,9 +1472,26 @@ export default function DrawingApp() {
       } else if ((tool === "line" || tool === "arrow") && lastElement.points) {
         const updatedElements = elements.map((el, index) => {
           if (index === elements.length - 1) {
-            return {
-              ...el,
-              points: [el.points?.[0] || { x: 0, y: 0 }, { x, y }],
+            // If Shift is pressed, constrain to horizontal, vertical, or 45-degree angles
+            if (e.shiftKey) {
+              const start = el.points?.[0] || { x: 0, y: 0 }
+              const dx = x - start.x
+              const dy = y - start.y
+              const angle = Math.atan2(dy, dx)
+              const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4)
+              const distance = Math.sqrt(dx * dx + dy * dy)
+              const snapX = start.x + distance * Math.cos(snapAngle)
+              const snapY = start.y + distance * Math.sin(snapAngle)
+
+              return {
+                ...el,
+                points: [start, { x: snapX, y: snapY }],
+              }
+            } else {
+              return {
+                ...el,
+                points: [el.points?.[0] || { x: 0, y: 0 }, { x, y }],
+              }
             }
           }
           return el
@@ -1254,26 +1507,30 @@ export default function DrawingApp() {
       const dx = x - startPoint.x
       const dy = y - startPoint.y
 
+      // If Shift is pressed, constrain movement to horizontal or vertical
+      const constrainedDx = e.shiftKey ? (Math.abs(dx) > Math.abs(dy) ? dx : 0) : dx
+      const constrainedDy = e.shiftKey ? (Math.abs(dy) > Math.abs(dx) ? dy : 0) : dy
+
       const updatedElements = elements.map((el) => {
         if (el.selected) {
           if (el.type === "rectangle" || el.type === "text") {
             return {
               ...el,
-              x: el.x + dx,
-              y: el.y + dy,
+              x: el.x + constrainedDx,
+              y: el.y + constrainedDy,
             }
           } else if (el.type === "circle") {
             return {
               ...el,
-              x: el.x + dx,
-              y: el.y + dy,
+              x: el.x + constrainedDx,
+              y: el.y + constrainedDy,
             }
           } else if ((el.type === "line" || el.type === "arrow") && el.points) {
             return {
               ...el,
               points: el.points.map((point) => ({
-                x: point.x + dx,
-                y: point.y + dy,
+                x: point.x + constrainedDx,
+                y: point.y + constrainedDy,
               })),
             }
           }
@@ -1401,6 +1658,17 @@ export default function DrawingApp() {
                   break
               }
 
+              // If Shift is pressed, maintain aspect ratio
+              if (e.shiftKey && newWidth !== 0 && newHeight !== 0) {
+                const aspectRatio = (el.width || 1) / (el.height || 1)
+
+                if (activeHandle.includes("top") || activeHandle.includes("bottom")) {
+                  newWidth = newHeight * aspectRatio
+                } else {
+                  newHeight = newWidth / aspectRatio
+                }
+              }
+
               // Ensure width and height are not negative
               if (newWidth < 0) {
                 newX = newX + newWidth
@@ -1445,9 +1713,37 @@ export default function DrawingApp() {
               const points = [...el.points]
 
               if (activeHandle === "start" && points.length > 0) {
-                points[0] = { x, y }
+                // If Shift is pressed, constrain to horizontal, vertical, or 45-degree angles
+                if (e.shiftKey && points.length > 1) {
+                  const end = points[1]
+                  const dx = end.x - x
+                  const dy = end.y - y
+                  const angle = Math.atan2(dy, dx)
+                  const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4)
+                  const distance = Math.sqrt(dx * dx + dy * dy)
+                  const snapX = end.x - distance * Math.cos(snapAngle)
+                  const snapY = end.y - distance * Math.sin(snapAngle)
+
+                  points[0] = { x: snapX, y: snapY }
+                } else {
+                  points[0] = { x, y }
+                }
               } else if (activeHandle === "end" && points.length > 1) {
-                points[1] = { x, y }
+                // If Shift is pressed, constrain to horizontal, vertical, or 45-degree angles
+                if (e.shiftKey) {
+                  const start = points[0]
+                  const dx = x - start.x
+                  const dy = y - start.y
+                  const angle = Math.atan2(dy, dx)
+                  const snapAngle = Math.round(angle / (Math.PI / 4)) * (Math.PI / 4)
+                  const distance = Math.sqrt(dx * dx + dy * dy)
+                  const snapX = start.x + distance * Math.cos(snapAngle)
+                  const snapY = start.y + distance * Math.sin(snapAngle)
+
+                  points[1] = { x: snapX, y: snapY }
+                } else {
+                  points[1] = { x, y }
+                }
               }
 
               return {
@@ -1604,10 +1900,10 @@ export default function DrawingApp() {
     // Position the textarea over the text element
     textarea.value = textElement.text || ""
     textarea.style.position = "absolute"
-    textarea.style.left = `${textElement.x}px`
-    textarea.style.top = `${textElement.y - 16}px` // Adjust for text baseline
+    textarea.style.left = `${textElement.x * zoom}px`
+    textarea.style.top = `${(textElement.y - 16) * zoom}px` // Adjust for text baseline
     textarea.style.fontFamily = "sans-serif"
-    textarea.style.fontSize = "16px"
+    textarea.style.fontSize = `${16 * zoom}px`
     textarea.style.padding = "0"
     textarea.style.margin = "0"
     textarea.style.overflow = "hidden"
@@ -1621,10 +1917,21 @@ export default function DrawingApp() {
     // Focus the textarea
     textarea.focus()
 
+    // Flag to track if the text has been saved
+    let isTextSaved = false
+
     // Handle saving the text when done editing
     const saveText = () => {
+      // Prevent multiple saves
+      if (isTextSaved) return
+      isTextSaved = true
+
       const newText = textarea.value
-      document.body.removeChild(textarea)
+
+      // Remove the textarea only if it's still in the document
+      if (textarea.parentNode) {
+        document.body.removeChild(textarea)
+      }
 
       // Update the element with the new text
       const updatedElements = elements.map((el) => {
@@ -1650,13 +1957,15 @@ export default function DrawingApp() {
     }
 
     // Save on blur
-    textarea.addEventListener("blur", saveText)
+    textarea.addEventListener("blur", saveText, { once: true })
 
     // Save on Enter key (without shift)
     textarea.addEventListener("keydown", (e) => {
       if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault()
         saveText()
+        // Remove focus to prevent blur event from firing after we've already saved
+        textarea.blur()
       }
     })
   }
@@ -1762,6 +2071,108 @@ export default function DrawingApp() {
             </Tooltip>
           </TooltipProvider>
 
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const selectedElements = elements.filter((el) => el.selected)
+                    if (selectedElements.length > 0) {
+                      const copiedElements = selectedElements.map((el) => ({
+                        ...JSON.parse(JSON.stringify(el)),
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                      }))
+                      setClipboard(copiedElements)
+                    }
+                  }}
+                  disabled={!elements.some((el) => el.selected)}
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Copy (Ctrl+C)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    const selectedElements = elements.filter((el) => el.selected)
+                    if (selectedElements.length > 0) {
+                      const copiedElements = selectedElements.map((el) => ({
+                        ...JSON.parse(JSON.stringify(el)),
+                        id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                      }))
+                      setClipboard(copiedElements)
+                      const updatedElements = elements.filter((el) => !el.selected)
+                      updateHistory(updatedElements)
+                      setSelectedElement(null)
+                    }
+                  }}
+                  disabled={!elements.some((el) => el.selected)}
+                >
+                  <Scissors className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Cut (Ctrl+X)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => {
+                    if (clipboard.length > 0) {
+                      const deselectedElements = elements.map((el) => ({
+                        ...el,
+                        selected: false,
+                      }))
+                      const pastedElements = clipboard.map((el) => {
+                        const newElement = {
+                          ...JSON.parse(JSON.stringify(el)),
+                          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+                          selected: true,
+                          x: el.x + 20,
+                          y: el.y + 20,
+                        }
+                        if ((el.type === "line" || el.type === "arrow") && el.points) {
+                          newElement.points = el.points.map((point) => ({
+                            x: point.x + 20,
+                            y: point.y + 20,
+                          }))
+                        }
+                        return newElement
+                      })
+                      updateHistory([...deselectedElements, ...pastedElements])
+                      if (pastedElements.length > 0) {
+                        setSelectedElement(pastedElements[0])
+                      }
+                    }
+                  }}
+                  disabled={clipboard.length === 0}
+                >
+                  <Clipboard className="h-4 w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Paste (Ctrl+V)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
           <Button variant="outline" size="sm" onClick={handleExport}>
             <Download className="h-4 w-4 mr-1" /> Export PNG
           </Button>
@@ -1798,6 +2209,7 @@ export default function DrawingApp() {
           setGridColor={setGridColor}
           gridOpacity={gridOpacity}
           setGridOpacity={setGridOpacity}
+          onShowKeyboardShortcuts={() => setShowShortcutsDialog(true)}
         />
 
         <div className="flex-1 relative bg-[#f5f5f5]">
@@ -1824,6 +2236,8 @@ export default function DrawingApp() {
           />
         )}
       </div>
+
+      <KeyboardShortcutsDialog isOpen={showShortcutsDialog} onClose={() => setShowShortcutsDialog(false)} />
     </div>
   )
 }
