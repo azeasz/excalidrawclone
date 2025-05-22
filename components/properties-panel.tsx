@@ -35,17 +35,17 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
 
   if (!element && selectedElements.length === 0) {
     return (
-      <div className="w-64 bg-white border-l p-4 overflow-y-auto">
+      <div className="w-64 bg-background border-l border-border p-4 overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="font-medium">Properties</h2>
         </div>
-        <div className="text-sm text-gray-500">No element selected</div>
+        <div className="text-sm text-muted-foreground">No element selected</div>
       </div>
     )
   }
 
   return (
-    <div className="w-64 bg-white border-l p-4 overflow-y-auto">
+    <div className="w-64 bg-background border-l border-border p-4 overflow-y-auto">
       <div className="flex items-center justify-between mb-4">
         <h2 className="font-medium">
           {multipleSelected ? `Properties (${selectedElements.length} elements)` : "Properties"}
@@ -67,7 +67,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
             <Input
               id="x-position"
               type="number"
-              value={Math.round(element?.x || 0)}
+              value={element?.x !== undefined ? Math.round(element.x) : 0}
               onChange={(e) => updateProperty("x", Number.parseInt(e.target.value))}
             />
           </div>
@@ -76,7 +76,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
             <Input
               id="y-position"
               type="number"
-              value={Math.round(element?.y || 0)}
+              value={element?.y !== undefined ? Math.round(element.y) : 0}
               onChange={(e) => updateProperty("y", Number.parseInt(e.target.value))}
             />
           </div>
@@ -89,7 +89,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
               <Input
                 id="width"
                 type="number"
-                value={Math.round(element?.width || 0)}
+                value={element?.width !== undefined ? Math.round(element.width) : 0}
                 onChange={(e) => updateProperty("width", Number.parseInt(e.target.value))}
               />
             </div>
@@ -98,7 +98,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
               <Input
                 id="height"
                 type="number"
-                value={Math.round(element?.height || 0)}
+                value={element?.height !== undefined ? Math.round(element.height) : 0}
                 onChange={(e) => updateProperty("height", Number.parseInt(e.target.value))}
               />
             </div>
@@ -111,7 +111,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
             <Input
               id="radius"
               type="number"
-              value={Math.round(element?.radius || 0)}
+              value={element?.radius !== undefined ? Math.round(element.radius) : 0}
               onChange={(e) => updateProperty("radius", Number.parseInt(e.target.value))}
             />
           </div>
@@ -135,7 +135,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
               <Input
                 id="rotation"
                 type="number"
-                value={Math.round(element?.rotation || 0)}
+                value={element?.rotation !== undefined ? Math.round(element.rotation) : 0}
                 onChange={(e) => updateProperty("rotation", Number.parseInt(e.target.value))}
                 className="w-full"
               />
@@ -149,11 +149,11 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
         <div>
           <Label htmlFor="stroke-color">Stroke Color</Label>
           <div className="flex items-center gap-2 mt-1">
-            <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: element?.stroke }} />
+            <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: element?.stroke || "#000000" }} />
             <Input
               id="stroke-color"
               type="color"
-              value={element?.stroke}
+              value={element?.stroke || "#000000"}
               onChange={(e) => updateProperty("stroke", e.target.value)}
               className="w-full"
             />
@@ -167,7 +167,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
             type="range"
             min="1"
             max="20"
-            value={element?.strokeWidth}
+            value={element?.strokeWidth !== undefined ? element.strokeWidth : 2}
             onChange={(e) => updateProperty("strokeWidth", Number.parseInt(e.target.value))}
             className="w-full"
           />
@@ -180,7 +180,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
               <div
                 className="w-8 h-8 rounded-md border"
                 style={{
-                  backgroundColor: element?.fill === "transparent" ? "white" : element?.fill,
+                  backgroundColor: element?.fill === "transparent" ? "white" : element?.fill || "#ffffff",
                   backgroundImage:
                     element?.fill === "transparent"
                       ? "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)"
@@ -192,7 +192,7 @@ export default function PropertiesPanel({ element, selectedElements, updatePrope
               <Input
                 id="fill-color"
                 type="color"
-                value={element?.fill === "transparent" ? "#ffffff" : element?.fill}
+                value={element?.fill === "transparent" ? "#ffffff" : element?.fill || "#ffffff"}
                 onChange={(e) => updateProperty("fill", e.target.value)}
                 className="w-full"
               />

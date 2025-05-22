@@ -6,6 +6,7 @@ import { Square, CircleIcon, Minus, ArrowRight, Type, Pencil, Trash2, MousePoint
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { ThemeToggle } from "./theme-toggle"
 
 type ToolbarProps = {
   activeTool: string
@@ -47,7 +48,7 @@ export default function Toolbar({
   onShowKeyboardShortcuts,
 }: ToolbarProps) {
   return (
-    <div className="w-64 bg-white border-r p-4 flex flex-col gap-4">
+    <div className="w-64 bg-background border-r border-border p-4 flex flex-col gap-4">
       <div>
         <h2 className="font-medium mb-2">Tools</h2>
         <div className="grid grid-cols-3 gap-2">
@@ -187,11 +188,11 @@ export default function Toolbar({
           <div>
             <Label htmlFor="stroke-color">Color</Label>
             <div className="flex items-center gap-2 mt-1">
-              <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: color }} />
+              <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: color || "#000000" }} />
               <Input
                 id="stroke-color"
                 type="color"
-                value={color}
+                value={color || "#000000"}
                 onChange={(e) => setColor(e.target.value)}
                 className="w-full"
               />
@@ -205,7 +206,7 @@ export default function Toolbar({
               type="range"
               min="1"
               max="20"
-              value={strokeWidth}
+              value={strokeWidth !== undefined ? strokeWidth : 2}
               onChange={(e) => setStrokeWidth(Number.parseInt(e.target.value))}
               className="w-full"
             />
@@ -222,7 +223,7 @@ export default function Toolbar({
             <div
               className="w-8 h-8 rounded-md border"
               style={{
-                backgroundColor: fill === "transparent" ? "white" : fill,
+                backgroundColor: fill === "transparent" ? "white" : fill || "#ffffff",
                 backgroundImage:
                   fill === "transparent"
                     ? "linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc), linear-gradient(45deg, #ccc 25%, transparent 25%, transparent 75%, #ccc 75%, #ccc)"
@@ -233,7 +234,7 @@ export default function Toolbar({
             />
             <Input
               type="color"
-              value={fill === "transparent" ? "#ffffff" : fill}
+              value={fill === "transparent" ? "#ffffff" : fill || "#ffffff"}
               onChange={(e) => setFill(e.target.value)}
               className="w-full"
             />
@@ -260,7 +261,7 @@ export default function Toolbar({
                 type="checkbox"
                 checked={showGrid}
                 onChange={(e) => setShowGrid(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
               />
             </div>
           </div>
@@ -275,7 +276,7 @@ export default function Toolbar({
               min="10"
               max="100"
               step="10"
-              value={gridSize}
+              value={gridSize !== undefined ? gridSize : 20}
               onChange={(e) => setGridSize(Number.parseInt(e.target.value))}
               className="w-full"
               disabled={!showGrid}
@@ -285,11 +286,11 @@ export default function Toolbar({
           <div>
             <Label htmlFor="grid-color">Grid Color</Label>
             <div className="flex items-center gap-2 mt-1">
-              <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: gridColor }} />
+              <div className="w-8 h-8 rounded-md border" style={{ backgroundColor: gridColor || "#cccccc" }} />
               <Input
                 id="grid-color"
                 type="color"
-                value={gridColor}
+                value={gridColor || "#cccccc"}
                 onChange={(e) => setGridColor(e.target.value)}
                 className="w-full"
                 disabled={!showGrid}
@@ -305,7 +306,7 @@ export default function Toolbar({
               min="5"
               max="100"
               step="5"
-              value={gridOpacity}
+              value={gridOpacity !== undefined ? gridOpacity : 50}
               onChange={(e) => setGridOpacity(Number.parseInt(e.target.value))}
               className="w-full"
               disabled={!showGrid}
@@ -317,9 +318,12 @@ export default function Toolbar({
       <Separator />
 
       <div className="mt-auto space-y-2">
-        <Button variant="outline" size="sm" className="w-full" onClick={onShowKeyboardShortcuts}>
-          <HelpCircle className="h-4 w-4 mr-2" /> Keyboard Shortcuts (?)
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1" onClick={onShowKeyboardShortcuts}>
+            <HelpCircle className="h-4 w-4 mr-2" /> Shortcuts (?)
+          </Button>
+          <ThemeToggle />
+        </div>
 
         <Button
           variant="destructive"

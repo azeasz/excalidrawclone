@@ -9,6 +9,7 @@ import KeyboardShortcutsDialog from "./keyboard-shortcuts-dialog"
 import { Download, Upload, Undo, Redo, Copy, Scissors, Clipboard } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { useTheme } from "@/hooks/use-theme"
 
 // Define types for our elements
 type ElementType = "selection" | "rectangle" | "circle" | "line" | "arrow" | "text" | "freehand"
@@ -52,6 +53,9 @@ type History = {
 }
 
 export default function DrawingApp() {
+  // Get theme context
+  const { theme, setTheme } = useTheme()
+
   // Instead of a simple elements state, we'll use a history object
   const [history, setHistory] = useState<History>({
     past: [],
@@ -65,8 +69,8 @@ export default function DrawingApp() {
   const [selectedElement, setSelectedElement] = useState<Element | null>(null)
   const [tool, setTool] = useState<ElementType>("selection")
   const [isDrawing, setIsDrawing] = useState(false)
-  const [color, setColor] = useState("#000000")
-  const [strokeWidth, setStrokeWidth] = useState(2)
+  const [color, setColor] = useState(theme === "dark" ? "#ffffff" : "#000000")
+  const [strokeWidth, setStrokeWidth] = useState<number>(2)
   const [fill, setFill] = useState("transparent")
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const [action, setAction] = useState<"none" | "drawing" | "moving" | "resizing" | "selecting">("none")
@@ -81,9 +85,9 @@ export default function DrawingApp() {
 
   // Grid settings
   const [showGrid, setShowGrid] = useState(true)
-  const [gridSize, setGridSize] = useState(20)
-  const [gridColor, setGridColor] = useState("#cccccc")
-  const [gridOpacity, setGridOpacity] = useState(50)
+  const [gridSize, setGridSize] = useState<number>(20)
+  const [gridColor, setGridColor] = useState(theme === "dark" ? "#333333" : "#cccccc")
+  const [gridOpacity, setGridOpacity] = useState<number>(50)
 
   // Selection box for multi-select
   const [selectionBox, setSelectionBox] = useState<{
@@ -98,6 +102,29 @@ export default function DrawingApp() {
 
   // Maximum number of history states to keep
   const MAX_HISTORY_LENGTH = 50
+
+  // Update default colors when theme changes
+  useEffect(() => {
+    if (theme === "dark") {
+      // Only update color if it's the default black
+      if (color === "#000000") {
+        setColor("#ffffff")
+      }
+      // Only update grid color if it's the default light mode color
+      if (gridColor === "#cccccc") {
+        setGridColor("#333333")
+      }
+    } else {
+      // Only update color if it's the default white
+      if (color === "#ffffff") {
+        setColor("#000000")
+      }
+      // Only update grid color if it's the default dark mode color
+      if (gridColor === "#333333") {
+        setGridColor("#cccccc")
+      }
+    }
+  }, [theme, color, gridColor])
 
   // Set canvas size on mount and resize
   useEffect(() => {
@@ -156,8 +183,9 @@ export default function DrawingApp() {
     const ctx = canvas.getContext("2d")
     if (!ctx) return
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    // Clear canvas with theme-appropriate background
+    ctx.fillStyle = `hsl(var(--canvas-background))`
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
 
     // Apply zoom
     ctx.save()
@@ -171,11 +199,11 @@ export default function DrawingApp() {
     // Draw selection box if it exists
     if (selectionBox) {
       ctx.save()
-      ctx.strokeStyle = "#4299e1"
+      ctx.strokeStyle = `hsl(var(--selection-color))`
       ctx.lineWidth = 1
       ctx.setLineDash([5, 5])
       ctx.strokeRect(selectionBox.startX, selectionBox.startY, selectionBox.width, selectionBox.height)
-      ctx.fillStyle = "rgba(66, 153, 225, 0.1)"
+      ctx.fillStyle = `hsl(var(--selection-fill))`
       ctx.fillRect(selectionBox.startX, selectionBox.startY, selectionBox.width, selectionBox.height)
       ctx.restore()
     }
@@ -287,7 +315,7 @@ export default function DrawingApp() {
         }
       } else if (element.type === "text") {
         ctx.font = "16px sans-serif"
-        ctx.fillStyle = element.fill
+        ctx.fillStyle = element.fill === "transparent" ? element.stroke : element.fill
         ctx.fillText(element.text || "Double click to edit", element.x, element.y)
       }
 
@@ -297,7 +325,7 @@ export default function DrawingApp() {
       // Draw selection indicator and resize handles if element is selected
       if (element.selected) {
         ctx.save()
-        ctx.strokeStyle = "#4299e1"
+        ctx.strokeStyle = `hsl(var(--selection-color))`
         ctx.lineWidth = 2
         ctx.setLineDash([5, 5])
 
@@ -379,7 +407,7 @@ export default function DrawingApp() {
 
     // Restore zoom
     ctx.restore()
-  }, [elements, activeHandle, showGrid, gridSize, gridColor, gridOpacity, selectionBox, zoom])
+  }, [elements, activeHandle, showGrid, gridSize, gridColor, gridOpacity, selectionBox, zoom, theme])
 
   // Function to draw the grid
   const drawGrid = (
@@ -423,8 +451,8 @@ export default function DrawingApp() {
     const height = element.height || 0
 
     // Draw handles
-    ctx.fillStyle = "#4299e1"
-    ctx.strokeStyle = "white"
+    ctx.fillStyle = `hsl(var(--handle-color))`
+    ctx.strokeStyle = `hsl(var(--handle-border))`
     ctx.lineWidth = 1
     ctx.setLineDash([])
 
@@ -484,8 +512,8 @@ export default function DrawingApp() {
     const y = element.y
     const radius = element.radius || 0
 
-    ctx.fillStyle = "#4299e1"
-    ctx.strokeStyle = "white"
+    ctx.fillStyle = `hsl(var(--handle-color))`
+    ctx.strokeStyle = `hsl(var(--handle-border))`
     ctx.lineWidth = 1
     ctx.setLineDash([])
 
@@ -522,8 +550,8 @@ export default function DrawingApp() {
     const start = element.points[0]
     const end = element.points[1]
 
-    ctx.fillStyle = "#4299e1"
-    ctx.strokeStyle = "white"
+    ctx.fillStyle = `hsl(var(--handle-color))`
+    ctx.strokeStyle = `hsl(var(--handle-border))`
     ctx.lineWidth = 1
     ctx.setLineDash([])
 
@@ -548,8 +576,8 @@ export default function DrawingApp() {
     const textWidth = (element.text || "").length * 8 // Approximate width
     const textHeight = 16 // Approximate height
 
-    ctx.fillStyle = "#4299e1"
-    ctx.strokeStyle = "white"
+    ctx.fillStyle = `hsl(var(--handle-color))`
+    ctx.strokeStyle = `hsl(var(--handle-border))`
     ctx.lineWidth = 1
     ctx.setLineDash([])
 
@@ -617,8 +645,8 @@ export default function DrawingApp() {
     ctx.stroke()
 
     // Draw rotation handle
-    ctx.fillStyle = "#4299e1"
-    ctx.strokeStyle = "white"
+    ctx.fillStyle = `hsl(var(--handle-color))`
+    ctx.strokeStyle = `hsl(var(--handle-border))`
     ctx.lineWidth = 1
     ctx.beginPath()
     ctx.arc(handleX, handleY, handleSize / 2, 0, Math.PI * 2)
@@ -977,6 +1005,10 @@ export default function DrawingApp() {
             setShowGrid(!showGrid)
             e.preventDefault()
             break
+          case "d":
+            setTheme(theme === "dark" ? "light" : "dark")
+            e.preventDefault()
+            break
           case "?":
             setShowShortcutsDialog(true)
             e.preventDefault()
@@ -1161,7 +1193,19 @@ export default function DrawingApp() {
 
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [history, elements, selectedElement, handleUndo, handleRedo, updateHistory, clipboard, showGrid, zoom])
+  }, [
+    history,
+    elements,
+    selectedElement,
+    handleUndo,
+    handleRedo,
+    updateHistory,
+    clipboard,
+    showGrid,
+    zoom,
+    theme,
+    setTheme,
+  ])
 
   const handleDeleteSelectedElements = () => {
     const updatedElements = elements.filter((el) => !el.selected)
@@ -1898,7 +1942,7 @@ export default function DrawingApp() {
     document.body.appendChild(textarea)
 
     // Position the textarea over the text element
-    textarea.value = textElement.text || ""
+    textarea.value = textElement.text || "" // Ensure we always have a string value
     textarea.style.position = "absolute"
     textarea.style.left = `${textElement.x * zoom}px`
     textarea.style.top = `${(textElement.y - 16) * zoom}px` // Adjust for text baseline
@@ -1908,11 +1952,12 @@ export default function DrawingApp() {
     textarea.style.margin = "0"
     textarea.style.overflow = "hidden"
     textarea.style.background = "transparent"
-    textarea.style.border = "1px solid #4299e1"
+    textarea.style.border = "1px solid hsl(var(--primary))"
     textarea.style.outline = "none"
     textarea.style.resize = "none"
     textarea.style.minWidth = "100px"
     textarea.style.minHeight = "20px"
+    textarea.style.color = theme === "dark" ? "white" : "black"
 
     // Focus the textarea
     textarea.focus()
@@ -1926,7 +1971,7 @@ export default function DrawingApp() {
       if (isTextSaved) return
       isTextSaved = true
 
-      const newText = textarea.value
+      const newText = textarea.value || "" // Ensure we always have a string value
 
       // Remove the textarea only if it's still in the document
       if (textarea.parentNode) {
@@ -1980,6 +2025,15 @@ export default function DrawingApp() {
 
   const updateElementProperty = (property: string, value: any) => {
     if (!elements.some((el) => el.selected)) return
+
+    // Ensure value is never undefined
+    if (value === undefined) {
+      if (typeof value === "string") {
+        value = ""
+      } else if (typeof value === "number") {
+        value = 0
+      }
+    }
 
     const updatedElements = elements.map((el) => {
       if (el.selected) {
@@ -2042,7 +2096,7 @@ export default function DrawingApp() {
 
   return (
     <div className="flex flex-col h-screen">
-      <div className="bg-white border-b p-2 flex justify-between items-center">
+      <div className="bg-background border-b border-border p-2 flex justify-between items-center">
         <h1 className="text-xl font-bold">Excalidraw Clone</h1>
         <div className="flex gap-2">
           <TooltipProvider>
@@ -2212,7 +2266,7 @@ export default function DrawingApp() {
           onShowKeyboardShortcuts={() => setShowShortcutsDialog(true)}
         />
 
-        <div className="flex-1 relative bg-[#f5f5f5]">
+        <div className="flex-1 relative bg-canvas-background">
           <canvas
             ref={canvasRef}
             width={canvasSize.width}

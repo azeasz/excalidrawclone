@@ -53,6 +53,7 @@ export default function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardSho
         { key: "Ctrl++", description: "Zoom in" },
         { key: "Ctrl+-", description: "Zoom out" },
         { key: "G", description: "Toggle grid" },
+        { key: "D", description: "Toggle dark mode" },
         { key: "?", description: "Show keyboard shortcuts" },
       ],
     },
@@ -74,9 +75,9 @@ export default function KeyboardShortcutsDialog({ isOpen, onClose }: KeyboardSho
                 <h3 className="font-medium text-lg mb-2">{category.category}</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {category.items.map((shortcut) => (
-                    <div key={shortcut.key} className="flex justify-between py-1 border-b border-gray-100">
-                      <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-sm">{shortcut.key}</span>
-                      <span className="text-gray-700">{shortcut.description}</span>
+                    <div key={shortcut.key} className="flex justify-between py-1 border-b border-border">
+                      <span className="font-mono bg-muted px-2 py-0.5 rounded text-sm">{shortcut.key}</span>
+                      <span className="text-muted-foreground">{shortcut.description}</span>
                     </div>
                   ))}
                 </div>
